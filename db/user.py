@@ -34,9 +34,9 @@ async def add_delimetr(message, delimetr):
 
 
 async def get_name(message):
-    user = User.get(user_id=message.from_user.id)
+    user = User.get(user_id=message.chat.id)
     return user.name
 
 
 async def get_delimetr(message):
-    return User.get(user_id=message.from_user.id).delimetr
+    return User.get(user_id=message.chat.id).delimetr

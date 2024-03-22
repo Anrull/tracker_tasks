@@ -1,11 +1,9 @@
 import ast
-from pprint import pprint
-
 from peewee import *
 import datetime
 
 db = SqliteDatabase('db/tasks.db')
-json_dict = {"tasks": {}, "other": {}}
+json_dict = {"info": "", "tasks": {}, "other": {}}
 
 
 class Tasks(Model):
@@ -28,7 +26,8 @@ class Tasks(Model):
 
 
 async def create_tasks(message, owner_name):
-    count = Tasks.select().count() + 1
+    count = Tasks.select()
+    count = max([int(i.id_task) for i in count]) + 1
     Tasks.create(id_task=count,
                  owner_name=owner_name,
                  owner_id=message.from_user.id,
@@ -37,12 +36,14 @@ async def create_tasks(message, owner_name):
 
 
 async def add_tasks(message, id_task, tasks):
-    print(tasks)
     tsk = Tasks.get(id_task=int(id_task))
     if message.chat.id in ast.literal_eval(tsk.users_ids):
         dct = ast.literal_eval(tsk.tasks)
         list_tasks = dct["tasks"]
-        len_tasks = len(list_tasks) + 1
+        if list_tasks.keys():
+            len_tasks = max([i for i in list_tasks.keys()]) + 1
+        else:
+            len_tasks = 1
         for task in tasks:
             if task[:1] == " ":
                 task = task[1:]
@@ -62,10 +63,35 @@ async def get_tasks(message, id_task):
     raise ValueError("Нет доступа")
 
 
-async def delete_tasks(message, id_task, delete_task_id):
+async def delete_tasks(message, id_task, delete_task_ids):
     tsk = Tasks.get(id_task=int(id_task))
     if message.chat.id in ast.literal_eval(tsk.users_ids):
         dct = ast.literal_eval(tsk.tasks)
-        del dct["tasks"][delete_task_id]
+        for i in delete_task_ids:
+            del dct["tasks"][i]
+        tsk.tasks = dct
+        tsk.save()
         return
     raise ValueError("Нет доступа")
+
+
+async def add_description(message, id_task, text):
+    tsk = Tasks.get(id_task=int(id_task))
+    if message.chat.id in ast.literal_eval(tsk.users_ids):
+        dct = ast.literal_eval(tsk.tasks)
+        dct["info"] = text
+        tsk.tasks = dct
+        tsk.save()
+        return
+    raise ValueError("Нет доступа")
+
+
+async def get_books(message):
+    notebooks = Tasks.select()
+    my_notebooks = []
+    ids_notebooks = []
+    for notebook in notebooks:
+        if message.chat.id in ast.literal_eval(notebook.users_ids):
+            my_notebooks.append(notebook)
+            ids_notebooks.append(notebook.id_task)
+    return {"all": my_notebooks, "ids": ids_notebooks}
